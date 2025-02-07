@@ -1,5 +1,5 @@
-use mysql::prelude::FromRow;
-use mysql::Row;
+use mysql_async::prelude::FromRow;
+use mysql_async::Row;
 
 /*
     User table
@@ -19,7 +19,7 @@ pub struct Users {
 
 impl FromRow for Users {
     fn from_row(row: Row) -> Self {
-        let (id, name, password, phone, wx_id) = mysql::from_row(row);
+        let (id, name, password, phone, wx_id) = mysql_async::from_row(row);
         Users {
             id: Some(id),
             name,
@@ -29,8 +29,8 @@ impl FromRow for Users {
         }
     }
 
-    fn from_row_opt(row: Row) -> Result<Self, mysql::FromRowError> {
-        let (id, name, password, phone, wx_id) = mysql::from_row_opt(row)?;
+    fn from_row_opt(row: Row) -> Result<Self, mysql_async::FromRowError> {
+        let (id, name, password, phone, wx_id) = mysql_async::from_row_opt(row)?;
         Ok(Users {
             id: Some(id),
             name,
@@ -61,7 +61,7 @@ pub struct Goods {
 
 impl FromRow for Goods {
     fn from_row(row: Row) -> Self {
-        let (id, type_, brand, price, fineness, desc, location) = mysql::from_row(row);
+        let (id, type_, brand, price, fineness, desc, location) = mysql_async::from_row(row);
         Goods {
             id: Some(id),
             type_,
@@ -73,8 +73,8 @@ impl FromRow for Goods {
         }
     }
 
-    fn from_row_opt(row: Row) -> Result<Self, mysql::FromRowError> {
-        let (id, type_, brand, price, fineness, desc, location) = mysql::from_row_opt(row)?;
+    fn from_row_opt(row: Row) -> Result<Self, mysql_async::FromRowError> {
+        let (id, type_, brand, price, fineness, desc, location) = mysql_async::from_row_opt(row)?;
         Ok(Goods {
             id: Some(id),
             type_,
@@ -106,7 +106,7 @@ pub struct Orders {
 
 impl FromRow for Orders {
     fn from_row(row: Row) -> Self {
-        let (id, user_id, goods_id, deal_price, deal_time, status) = mysql::from_row(row);
+        let (id, user_id, goods_id, deal_price, deal_time, status) = mysql_async::from_row(row);
         Orders {
             id: Some(id),
             user_id,
@@ -117,8 +117,8 @@ impl FromRow for Orders {
         }
     }
 
-    fn from_row_opt(row: Row) -> Result<Self, mysql::FromRowError> {
-        let (id, user_id, goods_id, deal_price, deal_time, status) = mysql::from_row_opt(row)?;
+    fn from_row_opt(row: Row) -> Result<Self, mysql_async::FromRowError> {
+        let (id, user_id, goods_id, deal_price, deal_time, status) = mysql_async::from_row_opt(row)?;
         Ok(Orders {
             id: Some(id),
             user_id,
