@@ -1,8 +1,9 @@
 mod test;
 mod db;
 mod models;
-
+mod router;
 use dotenv::dotenv;
+use router::wx_login;
 use std::env;
 use once_cell::sync::Lazy;
 use actix_web::{
@@ -15,16 +16,11 @@ static DATABASE_URL: Lazy<String> = Lazy::new(|| {
 });
 
 
-#[get("/")]
-async fn greet() -> impl Responder {
-    "Hello, World!"
-}
-
 #[actix_web::main]
 async fn main()-> std::io::Result<()> {
     HttpServer::new(|| {
         App::new()
-            .service(greet)
+            .service(wx_login)
     })
     .bind("0.0.0.0:3000")?
     .run()
