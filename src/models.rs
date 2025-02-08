@@ -3,9 +3,9 @@ use mysql_async::Row;
 
 /*
     User table
-    +----+--------+------------------+------------+---------+
-    | id | name   | password         | phone      | wx_id    |
-    +----+--------+------------------+------------+---------+
+    +----+--------+----------+----------+------------+---------+
+    | id | name   | password | store_id | phone      | wx_id   |
+    +----+--------+----------+----------+------------+---------+
 */
 
 #[derive(Debug, Clone)]
@@ -13,28 +13,31 @@ pub struct Users {
     pub id: Option<i32>,
     pub name: String,
     pub password: String,
+    pub store_id: String,
     pub phone: String,
     pub wx_id: String,
 }
 
 impl FromRow for Users {
     fn from_row(row: Row) -> Self {
-        let (id, name, password, phone, wx_id) = mysql_async::from_row(row);
+        let (id, name, password, store_id, phone, wx_id) = mysql_async::from_row(row);
         Users {
             id: Some(id),
             name,
             password,
+            store_id,
             phone,
             wx_id,
         }
     }
 
     fn from_row_opt(row: Row) -> Result<Self, mysql_async::FromRowError> {
-        let (id, name, password, phone, wx_id) = mysql_async::from_row_opt(row)?;
+        let (id, name, password, store_id, phone, wx_id) = mysql_async::from_row_opt(row)?;
         Ok(Users {
             id: Some(id),
             name,
             password,
+            store_id,
             phone,
             wx_id,
         })
@@ -43,9 +46,12 @@ impl FromRow for Users {
 
 /*
     Goods table
-    +----+--------+--------+-------+----------+--------+----------+
-    | id | type   | brand  | price | fineness | desc   | location |
-    +----+--------+--------+-------+----------+--------+----------+
+    +----+--------+--------+-------+----------+--------+----------+----------+
+    | id | type   | brand  | price | fineness | desc   | location | store_id |
+    +----+--------+--------+-------+----------+--------+----------+----------+
+    +--------+
+    | pic_url|
+    +--------+
 */
 
 #[derive(Debug, Clone)]
@@ -57,11 +63,12 @@ pub struct Goods {
     pub fineness: String,
     pub desc: String,
     pub location: String,
+    pub store_id: String,
 }
 
 impl FromRow for Goods {
     fn from_row(row: Row) -> Self {
-        let (id, type_, brand, price, fineness, desc, location) = mysql_async::from_row(row);
+        let (id, type_, brand, price, fineness, desc, location,store_id) = mysql_async::from_row(row);
         Goods {
             id: Some(id),
             type_,
@@ -70,11 +77,12 @@ impl FromRow for Goods {
             fineness,
             desc,
             location,
+            store_id,
         }
     }
 
     fn from_row_opt(row: Row) -> Result<Self, mysql_async::FromRowError> {
-        let (id, type_, brand, price, fineness, desc, location) = mysql_async::from_row_opt(row)?;
+        let (id, type_, brand, price, fineness, desc, location,store_id) = mysql_async::from_row_opt(row)?;
         Ok(Goods {
             id: Some(id),
             type_,
@@ -83,6 +91,7 @@ impl FromRow for Goods {
             fineness,
             desc,
             location,
+            store_id,
         })
     }
 }
@@ -129,3 +138,10 @@ impl FromRow for Orders {
         })
     }
 }
+
+
+/*
+    store table
+    +-------+------------+---------+
+    | id    |  
+*/

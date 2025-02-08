@@ -41,6 +41,8 @@ fn generate_jwt(openid: &str) -> String {
     encode(&Header::default(), &claims, &EncodingKey::from_secret((SECRET_KEY).as_ref())).unwrap()
 }
 
+
+// login 
 #[post("/wx_login")]
 async fn wx_login(info: web::Json<WxLoginRequest>) -> impl Responder {
 
@@ -90,3 +92,4 @@ async fn wx_login(info: web::Json<WxLoginRequest>) -> impl Responder {
     }
 }
 
+// 
