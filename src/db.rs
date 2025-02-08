@@ -81,13 +81,13 @@ pub async fn create_orders(user_id: i32, goods_id: i32, deal_price: f32, deal_ti
 
 // 查询用户
 
-pub async fn query_user(name: &str) -> Result<Users, Error> {
+pub async fn query_user(wx_id: &str) -> Result<Users, Error> {
     let pool = Pool::new(DATABASE_URL.clone());
     let mut conn = pool.get_conn().await?;
     let row = conn.exec_first(
-        r"SELECT * FROM users WHERE name = :name",
+        r"SELECT * FROM users WHERE wx_id = :wx_id",
         params! {
-            "name" => name,
+            "wx_id" => wx_id,
         },
     ).await?;
     let row:Row = row.unwrap();

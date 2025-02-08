@@ -1,11 +1,22 @@
-use actix_web::{post, web, App, HttpServer, Responder, HttpResponse};
-use serde::Deserialize;
+use actix_web::{cookie::{time::Duration, Expiration}, post, web, App, HttpResponse, HttpServer, Responder};
+use chrono::{TimeDelta, Utc};
+use jsonwebtoken::{encode, Header, EncodingKey};
+use serde::{Serialize, Deserialize};
 use reqwest::Client;
+
+use crate::{db::{create_user, query_user}, SECRET_KEY, WECHAT_APPID, WECHAT_SECRET};
 
 #[derive(Deserialize)]
 struct WxLoginRequest {
     code: String,
 }
+
+#[derive(Serialize)]
+struct Claims {
+    sub: String,
+    exp: usize,
+}
+
 
 #[derive(Deserialize)]
 struct WxSessionResponse {
@@ -16,12 +27,30 @@ struct WxSessionResponse {
     errmsg: Option<String>,
 }
 
+fn generate_jwt(openid: &str) -> String {
+    let expiration = Utc::now()
+        .checked_add_signed(TimeDelta::seconds(3600))
+        .expect("valid timestamp")
+        .timestamp() as usize;
 
+    let claims = Claims {
+        sub: openid.to_owned(),
+        exp: expiration,
+    };
+
+    encode(&Header::default(), &claims, &EncodingKey::from_secret((SECRET_KEY).as_ref())).unwrap()
+}
 
 #[post("/wx_login")]
 async fn wx_login(info: web::Json<WxLoginRequest>) -> impl Responder {
-    let appid = "your_appid";
-    let secret = "your_secret";
+
+
+    // for test
+    let token = generate_jwt("test");
+    return HttpResponse::Ok().json(token);
+
+    let appid = WECHAT_APPID.as_str();
+    let secret = WECHAT_SECRET.as_str();
     let code = &info.code;
     let url = format!("https://api.weixin.qq.com/sns/jscode2session?appid={}&secret={}&js_code={}&grant_type=authorization_code", appid, secret, code);
 
@@ -32,11 +61,30 @@ async fn wx_login(info: web::Json<WxLoginRequest>) -> impl Responder {
         Ok(response) => {
             let wx_session: WxSessionResponse = response.json().await.unwrap();
             if let Some(errcode) = wx_session.errcode {
-                HttpResponse::BadRequest().body(format!("WeChat API error: {}", errcode))
-            } else {
-                // 在这里处理 openid 和 session_key，例如查找或创建用户信息
-                HttpResponse::Ok().body(format!("Login successful, openid: {}", wx_session.openid))
+                return HttpResponse::BadRequest().body(format!("WeChat API error: {}", errcode));
+            } 
+            match query_user(&wx_session.openid).await {
+                Ok(_user) => {
+                    // user 是查询到的用户数据
+                    // 此处表示用户已存在
+                    let token = generate_jwt(&wx_session.openid);
+                    HttpResponse::Ok().json(token)
+                }
+                Err(_e) => {
+                    // 查询失败或用户不存在，根据需要处理
+                    // 创建用户
+                    match create_user("", "", "", &wx_session.openid).await {
+                        Ok(_ok)=>{}
+                        Err(_err)=>{}
+                    }
+                    let token = generate_jwt(&wx_session.openid);
+                    HttpResponse::Ok().json(token)
+
+
+                }
             }
+
+
         }
         Err(_) => HttpResponse::InternalServerError().body("Failed to call WeChat API"),
     }
