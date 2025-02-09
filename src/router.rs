@@ -4,7 +4,7 @@ use jsonwebtoken::{encode, Header, EncodingKey};
 use serde::{Serialize, Deserialize};
 use reqwest::Client;
 
-use crate::{db::{create_user, query_user}, SECRET_KEY, WECHAT_APPID, WECHAT_SECRET};
+use crate::{db::{get_user_by_open_id, create_user_by_open_id, update_user_by_open_id}, models::User, SECRET_KEY, WECHAT_APPID, WECHAT_SECRET, POOL};
 
 #[derive(Deserialize)]
 struct WxLoginRequest {
@@ -45,8 +45,6 @@ fn generate_jwt(openid: &str) -> String {
 // login 
 #[post("/wx_login")]
 async fn wx_login(info: web::Json<WxLoginRequest>) -> impl Responder {
-
-
     // for test
     let token = generate_jwt("test");
     return HttpResponse::Ok().json(token);
@@ -65,7 +63,7 @@ async fn wx_login(info: web::Json<WxLoginRequest>) -> impl Responder {
             if let Some(errcode) = wx_session.errcode {
                 return HttpResponse::BadRequest().body(format!("WeChat API error: {}", errcode));
             } 
-            match query_user(&wx_session.openid).await {
+            match get_user_by_open_id(&POOL,&wx_session.openid).await {
                 Ok(_user) => {
                     // user 是查询到的用户数据
                     // 此处表示用户已存在
@@ -73,15 +71,14 @@ async fn wx_login(info: web::Json<WxLoginRequest>) -> impl Responder {
                     HttpResponse::Ok().json(token)
                 }
                 Err(_e) => {
-                    // 查询失败或用户不存在，根据需要处理
+                    // 查询失败或用户不存在
                     // 创建用户
-                    match create_user("", "", "", &wx_session.openid).await {
+                    match create_user_by_open_id(&POOL,&wx_session.openid).await {
                         Ok(_ok)=>{}
                         Err(_err)=>{}
                     }
                     let token = generate_jwt(&wx_session.openid);
                     HttpResponse::Ok().json(token)
-
 
                 }
             }
@@ -92,4 +89,31 @@ async fn wx_login(info: web::Json<WxLoginRequest>) -> impl Responder {
     }
 }
 
-// 
+
+#[derive(Deserialize)]
+struct CreateAccountInfo {
+    token: String,
+    username: String,
+    password: String,
+    phone: String,
+    email: String,
+}
+
+
+// create user
+#[post("/create_user")]
+async fn create_user(info: web::Json<CreateAccountInfo>) -> impl Responder {
+    let user = info.into_inner();
+    let result = update_user_by_open_id(&POOL, &user.username, &user.password, &user.phone, &user.email).await;
+    match result {
+        Ok(_) => HttpResponse::Ok().body("User created successfully"),
+        Err(_) => HttpResponse::InternalServerError().body("Failed to create user"),
+    }
+}
+
+
+#[derive(Deserialize)]
+struct LoginInfo {
+    username: String,
+    password: String,
+}

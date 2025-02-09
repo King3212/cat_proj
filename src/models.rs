@@ -1,147 +1,179 @@
 use mysql_async::prelude::FromRow;
 use mysql_async::Row;
-
 /*
-    User table
-    +----+--------+----------+----------+------------+---------+
-    | id | name   | password | store_id | phone      | wx_id   |
-    +----+--------+----------+----------+------------+---------+
+# SQL define
+#
+# 1. users Table
+#   
+#   +----+------+------------+---------------+-----------+
+#   | id | name | phone(uni) | open_id(uni ) | stores_id |
+#   +----+------+------------+---------------+-----------+
+#
+# 2. stores Table
+#   +----+------+---------+
+#   | id | name | manager | 
+#   +----+------+---------+
+#
+# 3. goods Table
+#
+#   +----+------+-------+----------+-----------+------+------+----------+----------+
+#   | id | type | brand | price_in | price_out | desc | addr | pic_addr | fineness |
+#   +----+------+-------+----------+-----------+------+------+----------+----------+
+#
+# 4. orders Table
+#
+#   +----+----------+----------+-----------+-----------+
+#   | id | users_id | goods_id | deal_time | stores_id | 
+#   +----+----------+----------+-----------+-----------+
 */
 
-#[derive(Debug, Clone)]
-pub struct Users {
-    pub id: Option<i32>,
+
+// 1. users Table
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct User {
+    pub id: i32,
     pub name: String,
-    pub password: String,
-    pub store_id: String,
     pub phone: String,
-    pub wx_id: String,
+    pub open_id: String,
+    pub stores_id: i32,
 }
 
-impl FromRow for Users {
+impl FromRow for User {
     fn from_row(row: Row) -> Self {
-        let (id, name, password, store_id, phone, wx_id) = mysql_async::from_row(row);
-        Users {
-            id: Some(id),
+        let (id, name, phone, open_id, stores_id) = mysql_async::from_row(row);
+        User {
+            id,
             name,
-            password,
-            store_id,
             phone,
-            wx_id,
+            open_id,
+            stores_id,
         }
     }
 
-    fn from_row_opt(row: Row) -> Result<Self, mysql_async::FromRowError> {
-        let (id, name, password, store_id, phone, wx_id) = mysql_async::from_row_opt(row)?;
-        Ok(Users {
-            id: Some(id),
+    fn from_row_opt(row: Row) -> Result<Self, mysql_async::FromRowError>
+        where
+            Self: Sized {
+           let (id, name, phone, open_id, stores_id) = mysql_async::from_row_opt(row)?;
+           Ok(User {
+               id,
+               name,
+               phone,
+               open_id,
+               stores_id,
+           })
+    }
+    
+}
+
+
+// 2. stores Table
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct Store {
+    pub id: i32,
+    pub name: String,
+    pub manager: i32,
+}
+
+impl FromRow for Store {
+    fn from_row(row: Row) -> Self {
+        let (id, name,manager) = mysql_async::from_row(row);
+        Store {
+            id,
             name,
-            password,
-            store_id,
-            phone,
-            wx_id,
-        })
+            manager,
+        }
+    }
+    fn from_row_opt(row: Row) -> Result<Self, mysql_async::FromRowError>
+        where
+            Self: Sized {
+           let (id, name,manager) = mysql_async::from_row_opt(row)?;
+           Ok(Store {
+               id,
+               name,
+               manager,
+           })
     }
 }
 
-/*
-    Goods table
-    +----+--------+--------+-------+----------+--------+----------+----------+
-    | id | type   | brand  | price | fineness | desc   | location | store_id |
-    +----+--------+--------+-------+----------+--------+----------+----------+
-    +--------+
-    | pic_url|
-    +--------+
-*/
-
-#[derive(Debug, Clone)]
-pub struct Goods {
-    pub id: Option<i32>,
+// 3. goods Table
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct Good {
+    pub id: i32,
     pub type_: String,
     pub brand: String,
-    pub price: f32,
-    pub fineness: String,
+    pub price_in: f64,
+    pub price_out: f64,
     pub desc: String,
-    pub location: String,
-    pub store_id: String,
+    pub addr: String,
+    pub pic_addr: String,
+    pub fineness: String,
 }
 
-impl FromRow for Goods {
+impl FromRow for Good {
     fn from_row(row: Row) -> Self {
-        let (id, type_, brand, price, fineness, desc, location,store_id) = mysql_async::from_row(row);
-        Goods {
-            id: Some(id),
+        let (id, type_, brand, price_in, price_out, desc, addr, pic_addr, fineness) = mysql_async::from_row(row);
+        Good {
+            id,
             type_,
             brand,
-            price,
-            fineness,
+            price_in,
+            price_out,
             desc,
-            location,
-            store_id,
+            addr,
+            pic_addr,
+            fineness,
         }
     }
-
-    fn from_row_opt(row: Row) -> Result<Self, mysql_async::FromRowError> {
-        let (id, type_, brand, price, fineness, desc, location,store_id) = mysql_async::from_row_opt(row)?;
-        Ok(Goods {
-            id: Some(id),
-            type_,
-            brand,
-            price,
-            fineness,
-            desc,
-            location,
-            store_id,
-        })
+    fn from_row_opt(row: Row) -> Result<Self, mysql_async::FromRowError>
+        where
+            Self: Sized {
+           let (id, type_, brand, price_in, price_out, desc, addr, pic_addr, fineness) = mysql_async::from_row_opt(row)?;
+           Ok(Good {
+               id,
+               type_,
+               brand,
+               price_in,
+               price_out,
+               desc,
+               addr,
+               pic_addr,
+               fineness,
+           })
     }
 }
 
-/*
-    Orders table
-    +----+---------+----------+------------+-----------+--------+
-    | id | user_id | goods_id | deal_price | deal_time | status |
-    +----+---------+----------+------------+-----------+--------+
-*/
-
-#[derive(Debug, Clone)]
+// 4. orders Table
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Orders {
-    pub id: Option<i32>,
-    pub user_id: i32,
+    pub id: i32,
+    pub users_id: i32,
     pub goods_id: i32,
-    pub deal_price: f32,
     pub deal_time: String,
-    pub status: i32,
+    pub stores_id: i32,
 }
 
 impl FromRow for Orders {
     fn from_row(row: Row) -> Self {
-        let (id, user_id, goods_id, deal_price, deal_time, status) = mysql_async::from_row(row);
+        let (id, users_id, goods_id, deal_time, stores_id) = mysql_async::from_row(row);
         Orders {
-            id: Some(id),
-            user_id,
+            id,
+            users_id,
             goods_id,
-            deal_price,
             deal_time,
-            status,
+            stores_id,
         }
     }
-
-    fn from_row_opt(row: Row) -> Result<Self, mysql_async::FromRowError> {
-        let (id, user_id, goods_id, deal_price, deal_time, status) = mysql_async::from_row_opt(row)?;
-        Ok(Orders {
-            id: Some(id),
-            user_id,
-            goods_id,
-            deal_price,
-            deal_time,
-            status,
-        })
+    fn from_row_opt(row: Row) -> Result<Self, mysql_async::FromRowError>
+        where
+            Self: Sized {
+           let (id, users_id, goods_id, deal_time, stores_id) = mysql_async::from_row_opt(row)?;
+           Ok(Orders {
+               id,
+               users_id,
+               goods_id,
+               deal_time,
+               stores_id,
+           })
     }
 }
 
-
-/*
-    store table
-    +-------+------------+---------+
-    | id    |  
-*/

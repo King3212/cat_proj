@@ -5,6 +5,7 @@ mod router;
 mod jwt;
 use dotenv::dotenv;
 use router::wx_login;
+use router::create_user;
 use std::env;
 use once_cell::sync::Lazy;
 use actix_web::{
@@ -13,10 +14,6 @@ use actix_web::{
 
 
 // set env
-static DATABASE_URL: Lazy<String> = Lazy::new(|| {
-    dotenv().ok();
-    env::var("DATABASE_URL").expect("DATABASE_URL must be set in .env file")
-});
 static WECHAT_APPID: Lazy<String> = Lazy::new(||{
     dotenv().ok();
     env::var("WECHAT_APPID").expect("WECHAT_APPID must be set in .env file")
@@ -30,6 +27,13 @@ static SECRET_KEY: Lazy<String> = Lazy::new(||{
     env::var("SECRET_KEY").expect("SECRET_KEY must be set in .env file")
 });
 
+// set pool
+static POOL: Lazy<mysql_async::Pool> = Lazy::new(||{
+    dotenv().ok();
+    let DATABASE_URL = env::var("DATABASE_URL").expect("DATABASE_URL must be set in .env file");
+    mysql_async::Pool::new(DATABASE_URL.as_str())
+});
+
 
 #[actix_web::main]
 async fn main()-> std::io::Result<()> {
@@ -37,6 +41,7 @@ async fn main()-> std::io::Result<()> {
     HttpServer::new(|| {
         App::new()
             .service(wx_login)
+            .service(create_user)
     })
     .bind("localhost:3000")?
     .run()
