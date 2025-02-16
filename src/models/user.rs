@@ -143,3 +143,28 @@ pub async fn set_user_stores_id(pool: &Pool,open_id: &str,stores_id: &str)-> Res
     ).await?;
     Ok(())
 }
+
+
+use serde::Deserialize;
+#[derive(Deserialize)]
+pub struct PasswdLoginRequest1 {
+    pub phone: String,
+}
+
+#[derive(Deserialize)]
+pub struct PasswdLoginResponse1 {
+    pub salt: String,
+    pub random_code: String,
+    pub code: String,
+    pub msg: String,
+}
+
+#[derive(Deserialize)]
+pub struct PasswdLoginRequest2 {
+    pub passwd_salted: String
+}
+
+pub struct PasswdLoginResponse2 {
+    pub code: String
+}
+

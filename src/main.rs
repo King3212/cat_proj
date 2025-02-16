@@ -32,17 +32,14 @@ static POOL: Lazy<mysql_async::Pool> = Lazy::new(||{
     mysql_async::Pool::new(DATABASE_URL.as_str())
 });
 
-pub fn config(cfg: &mut web::ServiceConfig) {
-    cfg.service(wx_login_routes)
-        .service(create_user); // 需要确保create_user路由存在
-}
+
 
 #[actix_web::main]
 async fn main()-> std::io::Result<()> {
     println!("localhost:3000");
     HttpServer::new(|| {
         App::new()
-        .configure(api_routes::config)
+        .service(routes::api_routes::wx_login_routes)
     })
     .bind("localhost:3000")?
     .run()

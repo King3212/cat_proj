@@ -1,6 +1,6 @@
 use serde::{Serialize, Deserialize};
 use chrono::{TimeDelta, Utc};
-use jsonwebtoken::{encode, Header, EncodingKey, Validation, decode, DecodingKey};
+use jsonwebtoken::{encode, Header, EncodingKey, Validation, decode, DecodingKey, Algorithm};
 use crate::SECRET_KEY;
 
 
@@ -26,11 +26,10 @@ pub fn generate_jwt(openid: &str) -> String {
 }
 
 pub fn validate_jwt(token: &str) -> Result<Claims, jsonwebtoken::errors::Error> {
-    let validation = Validation {
-        leeway: 0, // 可选择的时间偏差
-        validate_exp: true, // 验证过期时间
-        ..Validation::default()
-    };
+    let mut validation = Validation::new(Algorithm::HS256);
+    validation.leeway = 0;
+    validation.validate_exp = true;
+    validation.validate_nbf = true;
 
     // 解码并验证JWT
     let token_data = decode::<Claims>(

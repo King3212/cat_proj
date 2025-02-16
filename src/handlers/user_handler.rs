@@ -20,7 +20,7 @@ pub async fn add_user_to_db_by_openid(open_id: &String){
         Ok(user) => {
             if user.is_none() {
                 // 没有用户，添加用户
-                user::create_user_by_open_id(&POOL,&open_id).await;
+                let _ = user::create_user_by_open_id(&POOL,&open_id).await;
             }
         }
         Err(_) => {
@@ -28,4 +28,9 @@ pub async fn add_user_to_db_by_openid(open_id: &String){
         }
         
     }
+}
+
+pub async fn get_user_by_phone(phone: &String) -> Result<Option<user::User>, sqlx::Error> {
+    let user = user::get_user_by_phone(&POOL, phone).await;
+    return user;
 }

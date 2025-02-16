@@ -4,6 +4,7 @@ pub mod good;
 pub mod orders;
 pub mod jwt;
 pub mod wx;
+pub mod passwd;
 
 
 /*

@@ -16,9 +16,24 @@ pub struct WxLoginRequest {
     pub code: String,
 }
 
-pub async fn wx_login(code: &String) -> Result<WxLoginResponse, reqwest::Error> {
-    let url = format!("https://api.weixin.qq.com/sns/jscode2session?appid={}&secret={}&js_code={}&grant_type=authorization_code",
-                      WECHAT_APPID.as_str(), WECHAT_SECRET.as_str(), &code);
-    let res = reqwest::get(&url).await?.json::<WxLoginResponse>().await?;
-    Ok(res)
+pub async fn wx_login(code: &String, base_url: Option<&str>) -> Result<WxLoginResponse, reqwest::Error> {
+    let api_base = base_url.unwrap_or("https://api.weixin.qq.com");
+    let url = format!(
+        "{}/sns/jscode2session?appid={}&secret={}&js_code={}&grant_type=authorization_code",
+        api_base,
+        WECHAT_APPID.as_str(),
+        WECHAT_SECRET.as_str(),
+        code
+    );
+    reqwest::get(&url).await?.json().await
+}
+pub async fn wx_login_api_for_test(code: &String) -> Result<WxLoginResponse, reqwest::Error> {
+    let response: WxLoginResponse = WxLoginResponse {
+        open_id: "123".to_string(),
+        session_key: "123".to_string(),
+        union_id: None,
+        errcode: None,
+        errmsg: None,
+    };
+    Ok(response)
 }

@@ -1,21 +1,24 @@
 use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
 
 use crate::models::jwt::*;
-use crate::models::wx::*;
+use crate::models::user::{get_user_by_open_id, , PasswdLoginRequest1, PasswdLoginRequest2, PasswdLoginResponse1, PasswdLoginResponse2};
+use crate::models::wx;
 use crate::handlers::user_handler::*;
 use actix_web::http::Error;
 use std::result;
 
+use super::user_handler;
+
 // 检查是否合规，返回jwt或错误
-pub async fn wx_login_check(info: &web::Json<WxLoginRequest>) -> String {
+pub async fn wx_login(info: &web::Json<wx::WxLoginRequest>) -> String {
     // 向服务器请求code对应的数据
-    let res = wx_login(&info.code).await; 
+    let res = wx::wx_login(&info.code,None).await; 
     // 检查res是否为error
     if res.is_err() {
         return "Error, please check your code".to_string();
     }
     // 解析res
-    let wx_session: WxLoginResponse = res.unwrap();
+    let wx_session: wx::WxLoginResponse = res.unwrap();
     // 要求数据库添加用户
     add_user_to_db_by_openid(&wx_session.open_id).await;
     // 根据返回的数据生成token
@@ -23,6 +26,26 @@ pub async fn wx_login_check(info: &web::Json<WxLoginRequest>) -> String {
     // 返回token    
     return token;
 }
+
+pub async fn need_passwd_login(info: &web::Json<PasswdLoginRequest1>) -> PasswdLoginResponse1 {
+    let user = user_handler::get_user_by_phone(&info.phone).await;
+    if user.is_err() {
+        return PasswdLoginResponse1 {
+            code: 400.to_string(),
+            msg: "用户不存在".to_string(),
+            salt: "".to_string(),
+            random_code: "".to_string()
+        };
+    }else{
+        return PasswdLoginResponse1{
+            code: 200.to_string(),
+            msg: "success".to_string(),
+            salt: user.unwrap().salt,
+        }
+    }
+    
+}
+
 
 
 
