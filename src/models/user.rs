@@ -1,39 +1,61 @@
-use mysql_async::*;
-use mysql_async::Pool;
-use mysql_async::Error;
-use mysql_async::prelude::*;
-use crate::models::User;
-use crate::models::Good;
-use crate::models::Orders;
-use crate::models::Store;
-use std::result::Result;
-
-/*
-# SQL define
-#
-# 1. users Table
+use mysql_async::prelude::FromRow;
+use mysql_async::Row;
+/* 
+#   users Table
 #   
 #   +----+------+------------+---------------+-----------+
 #   | id | name | phone(uni) | open_id(uni ) | stores_id |
 #   +----+------+------------+---------------+-----------+
 #
-# 2. stores Table
-#   +----+------+---------+
-#   | id | name | manager | 
-#   +----+------+---------+
-#
-# 3. goods Table
-#
-#   +----+------+-------+----------+-----------+------+------+----------+----------+
-#   | id | type | brand | price_in | price_out | desc | addr | pic_addr | fineness |
-#   +----+------+-------+----------+-----------+------+------+----------+----------+
-#
-# 4. orders Table
-#
-#   +----+----------+----------+-----------+-----------+
-#   | id | users_id | goods_id | deal_time | stores_id | 
-#   +----+----------+----------+-----------+-----------+
 */
+
+// users Table
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct User {
+    pub id: i32,
+    pub name: String,
+    pub phone: String,
+    pub open_id: String,
+    pub stores_id: i32,
+}
+
+impl FromRow for User {
+    fn from_row(row: Row) -> Self {
+        let (id, name, phone, open_id, stores_id) = mysql_async::from_row(row);
+        User {
+            id,
+            name,
+            phone,
+            open_id,
+            stores_id,
+        }
+    }
+
+    fn from_row_opt(row: Row) -> Result<Self, mysql_async::FromRowError>
+        where
+            Self: Sized {
+           let (id, name, phone, open_id, stores_id) = mysql_async::from_row_opt(row)?;
+           Ok(User {
+               id,
+               name,
+               phone,
+               open_id,
+               stores_id,
+           })
+    }
+}
+
+
+
+
+use mysql_async::*;
+use mysql_async::Pool;
+use mysql_async::Error;
+use mysql_async::prelude::*;
+use std::result::Result;
+
+
+
 
 pub async fn create_user_by_open_id(pool: &Pool,open_id: &str)-> Result<(), Error> {
 
@@ -121,5 +143,3 @@ pub async fn set_user_stores_id(pool: &Pool,open_id: &str,stores_id: &str)-> Res
     ).await?;
     Ok(())
 }
-
-

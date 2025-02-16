@@ -1,16 +1,14 @@
-mod test;
-mod db;
-mod models;
-mod router;
-mod jwt;
 use dotenv::dotenv;
-use router::wx_login;
-use router::create_user;
 use std::env;
 use once_cell::sync::Lazy;
 use actix_web::{
-    get,App,HttpServer,Responder
+    get,App,HttpServer,Responder,HttpResponse,web
 };
+
+mod handlers;
+mod models;
+mod routes;
+use routes::api_routes;
 
 
 // set env
@@ -34,14 +32,17 @@ static POOL: Lazy<mysql_async::Pool> = Lazy::new(||{
     mysql_async::Pool::new(DATABASE_URL.as_str())
 });
 
+pub fn config(cfg: &mut web::ServiceConfig) {
+    cfg.service(wx_login_routes)
+        .service(create_user); // 需要确保create_user路由存在
+}
 
 #[actix_web::main]
 async fn main()-> std::io::Result<()> {
     println!("localhost:3000");
     HttpServer::new(|| {
         App::new()
-            .service(wx_login)
-            .service(create_user)
+        .configure(api_routes::config)
     })
     .bind("localhost:3000")?
     .run()
