@@ -3,9 +3,9 @@ use mysql_async::Row;
 /* 
 #   users Table
 #   
-#   +----+------+------------+---------------+-----------+
-#   | id | name | phone(uni) | open_id(uni ) | stores_id |
-#   +----+------+------------+---------------+-----------+
+#   +----+------+------------+---------------+-----------+------+------------+
+#   | id | name | phone(uni) | open_id(uni ) | stores_id | salt | local_hash |
+#   +----+------+------------+---------------+-----------+------+------------+
 #
 */
 
@@ -17,30 +17,36 @@ pub struct User {
     pub phone: String,
     pub open_id: String,
     pub stores_id: i32,
+    pub salt: String,
+    pub local_hash: String,
 }
 
 impl FromRow for User {
     fn from_row(row: Row) -> Self {
-        let (id, name, phone, open_id, stores_id) = mysql_async::from_row(row);
+        let (id, name, phone, open_id, stores_id, salt, local_hash) = mysql_async::from_row(row);
         User {
             id,
             name,
             phone,
             open_id,
             stores_id,
+            salt,
+            local_hash,
         }
     }
 
     fn from_row_opt(row: Row) -> Result<Self, mysql_async::FromRowError>
         where
             Self: Sized {
-           let (id, name, phone, open_id, stores_id) = mysql_async::from_row_opt(row)?;
+           let (id, name, phone, open_id, stores_id,salt,local_hash) = mysql_async::from_row_opt(row)?;
            Ok(User {
                id,
                name,
                phone,
                open_id,
                stores_id,
+               salt,
+               local_hash,
            })
     }
 }

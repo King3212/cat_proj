@@ -31,6 +31,6 @@ pub async fn add_user_to_db_by_openid(open_id: &String){
 }
 
 pub async fn get_user_by_phone(phone: &String) -> Result<Option<user::User>, sqlx::Error> {
-    let user = user::get_user_by_phone(&POOL, phone).await;
+    let result = need_passwd_login
     return user;
 }
