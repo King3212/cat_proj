@@ -1,13 +1,41 @@
-use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{web,};
 
-use crate::models::jwt::*;
-use crate::models::user::{get_user_by_open_id, , PasswdLoginRequest1, PasswdLoginRequest2, PasswdLoginResponse1, PasswdLoginResponse2};
+use crate::models::jwt::{self, *};
 use crate::models::wx;
 use crate::handlers::user_handler::*;
-use actix_web::http::Error;
-use std::result;
-
+use serde::Serialize;
 use super::user_handler;
+
+use serde::Deserialize;
+#[derive(Deserialize)]
+pub struct PasswdLoginRequest1 {
+    pub phone: String,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct PasswdLoginResponse1 {
+    pub salt: String,
+    pub random_code: String,
+    pub code: String,
+    pub msg: String,
+}
+
+#[derive(Deserialize)]
+pub struct PasswdLoginRequest2 {
+    pub phone: String,
+    pub passwd_salted: String
+}
+
+
+#[derive(Deserialize, Serialize)]
+pub struct PasswdLoginResponse2 {
+    pub code: String,
+    pub jwt: String,
+}
+
+
+
+
 
 // 检查是否合规，返回jwt或错误
 pub async fn wx_login(info: &web::Json<wx::WxLoginRequest>) -> String {
@@ -27,23 +55,53 @@ pub async fn wx_login(info: &web::Json<wx::WxLoginRequest>) -> String {
     return token;
 }
 
-pub async fn need_passwd_login(info: &web::Json<PasswdLoginRequest1>) -> PasswdLoginResponse1 {
-    let user = user_handler::get_user_by_phone(&info.phone).await;
-    if user.is_err() {
+use rand_core::{TryRngCore, OsRng};
+
+pub async fn need_passwd_login_1(info: &web::Json<PasswdLoginRequest1>) -> PasswdLoginResponse1 {
+    let user: crate::models::user::User = user_handler::get_user_by_phone(&info.phone).await;
+    if user.id == 0 {
         return PasswdLoginResponse1 {
-            code: 400.to_string(),
+            code: "100".to_string(),
             msg: "用户不存在".to_string(),
             salt: "".to_string(),
-            random_code: "".to_string()
+            random_code: "".to_string(),
         };
     }else{
-        return PasswdLoginResponse1{
-            code: 200.to_string(),
-            msg: "success".to_string(),
-            salt: user.unwrap().salt,
-        }
+        let mut rng: OsRng = OsRng;
+        let mut key: [u8; 6] = [0u8; 6];
+        rng.try_fill_bytes(&mut key).unwrap();
+        let key: String = hex::encode(key);
+        return PasswdLoginResponse1 {
+            code: "200".to_string(),
+            msg: "用户存在".to_string(),
+            salt: user.salt,
+            random_code: key,
+        };
+
     }
     
+}
+
+pub async fn need_passwd_login_2(info: &web::Json<PasswdLoginRequest2>) -> PasswdLoginResponse2 {
+    let user = user_handler::get_user_by_phone(&info.phone).await;
+    if user.id == 0 {
+        return PasswdLoginResponse2 {
+            code: "100".to_string(),
+            jwt: "".to_string(),
+        };
+    }else{
+        if user.local_hash != info.passwd_salted {
+            return PasswdLoginResponse2 {
+                code: "101".to_string(),
+                jwt: "".to_string(),
+            };
+        }
+        let token = generate_jwt(&user.id.to_string());
+        return PasswdLoginResponse2 {
+            code: "200".to_string(),
+            jwt: token
+        };
+    }
 }
 
 

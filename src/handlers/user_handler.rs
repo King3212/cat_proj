@@ -1,4 +1,4 @@
-use crate::models::user;
+use crate::models::user::{self, User};
 use crate::POOL;
 
 // // create user
@@ -30,7 +30,14 @@ pub async fn add_user_to_db_by_openid(open_id: &String){
     }
 }
 
-pub async fn get_user_by_phone(phone: &String) -> Result<Option<user::User>, sqlx::Error> {
-    let result = need_passwd_login
-    return user;
+pub async fn get_user_by_phone(phone: &String) -> user::User {
+    let result:Result<Option<User>, mysql_async::Error> = user::get_user_by_phone(&POOL, phone).await;
+    match result {
+        Ok(user) => {
+            user.unwrap()
+        }
+        Err(_) => {
+            User::default()
+        }
+    }
 }

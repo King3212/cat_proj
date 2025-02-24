@@ -40,3 +40,8 @@ pub fn validate_jwt(token: &str) -> Result<Claims, jsonwebtoken::errors::Error> 
 
     Ok(token_data.claims)  // 返回解码后的 Claims
 }
+
+pub fn get_openid_from_jwt(token: &str) -> Result<String, jsonwebtoken::errors::Error> {
+    let claims = validate_jwt(token)?;
+    Ok(claims.sub)
+}
