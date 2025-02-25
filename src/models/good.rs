@@ -1,4 +1,6 @@
-use mysql_async::prelude::FromRow;
+use std::result;
+
+use mysql_async::prelude::{FromRow, Queryable};
 use mysql_async::{Row, Serialized};
 
 
@@ -24,7 +26,7 @@ pub struct Good {
     pub addr: String,
     pub pic_addr: String,
     pub fineness: String,
-    pub store_id: i32,
+    pub stores_id: i32,
 }
 
 impl FromRow for Good {
@@ -40,7 +42,7 @@ impl FromRow for Good {
             addr,
             pic_addr,
             fineness,
-            store_id,
+            stores_id: store_id,
         }
     }
     fn from_row_opt(row: Row) -> Result<Self, mysql_async::FromRowError>
@@ -57,7 +59,7 @@ impl FromRow for Good {
                addr,
                pic_addr,
                fineness,
-               store_id,
+               stores_id: store_id,
            })
     }
 }
@@ -65,47 +67,58 @@ impl FromRow for Good {
 
 
 
-use mysql_async::{Pool};
+use mysql_async::{Pool,params};
 use crate::handlers::good_handler;
 use crate::models::jwt;
 use crate::models::user;
+use mysql_async::*;
+use mysql_async::Error;
+use mysql_async::prelude::*;
+use std::default;
+use std::result::Result;
 
 
-
-
-
-
-pub async fn search_goods(POOL: &Pool ,searchCriteria: &good_handler::SearchCriteria) -> Vec<good_handler::SearchGood>{
+pub async fn search_goods_nums(POOL: &Pool, searchCriteria: &good_handler::SearchCriteria) -> i64 {
     let mut conn = POOL.get_conn().await.unwrap();
     let open_id = jwt::get_openid_from_jwt(&searchCriteria.jwt);
     let store_id = user::get_user_by_open_id(POOL, &open_id.unwrap()).await.unwrap().unwrap().stores_id;
-    let mut pre_query = "SELECT * FROM goods WHERE store_id = ?".to_string();
+    let mut pre_query = "SELECT COUNT(*) FROM goods WHERE store_id = ?".to_string();
     let mut args: Vec<String> = Vec::new();
     args.push(store_id.to_string());
-    
-    if searchCriteria.type_ != "".to_string() {
+
+    // 类型过滤
+    if !searchCriteria.type_.is_empty() {
         pre_query.push_str(" AND type = ?");
         args.push(searchCriteria.type_.clone());
     }
-    if !searchCriteria.brand.is_empty(){
-        pre_query.push_str(" AND brand = ?");
-        args.push(searchCriteria.brand.get(0).unwrap().to_string());
 
-        for i in 1..searchCriteria.brand.len(){
-            pre_query.push_str(" OR brand = ?");
-            args.push(searchCriteria.brand.get(i).unwrap().to_string());
+    // 品牌过滤
+    if !searchCriteria.brand.is_empty() {
+        pre_query.push_str(" AND (");
+        for (i, brand) in searchCriteria.brand.iter().enumerate() {
+            if i > 0 {
+                pre_query.push_str(" OR ");
+            }
+            pre_query.push_str("brand = ?");
+            args.push(brand.clone());
         }
+        pre_query.push_str(")");
     }
-    if !searchCriteria.fineness.is_empty(){
-        pre_query.push_str(" AND fineness = ?");
-        args.push(searchCriteria.fineness.get(0).unwrap().to_string());
 
-        for i in 1..searchCriteria.fineness.len(){
-            pre_query.push_str(" OR fineness = ?");
-            args.push(searchCriteria.fineness.get(i).unwrap().to_string());
+    // 精度过滤
+    if !searchCriteria.fineness.is_empty() {
+        pre_query.push_str(" AND (");
+        for (i, fineness) in searchCriteria.fineness.iter().enumerate() {
+            if i > 0 {
+                pre_query.push_str(" OR ");
+            }
+            pre_query.push_str("fineness = ?");
+            args.push(fineness.clone());
         }
+        pre_query.push_str(")");
     }
-    
+
+    // 价格过滤
     if searchCriteria.max_price > 0.0 {
         pre_query.push_str(" AND price_in <= ?");
         args.push(searchCriteria.max_price.to_string());
@@ -114,39 +127,108 @@ pub async fn search_goods(POOL: &Pool ,searchCriteria: &good_handler::SearchCrit
         pre_query.push_str(" AND price_in >= ?");
         args.push(searchCriteria.min_price.to_string());
     }
-    
-    if searchCriteria.desc != "".to_string() {
+
+    // 描述过滤
+    if !searchCriteria.desc.is_empty() {
         pre_query.push_str(" AND desc LIKE ?");
         args.push(format!("%{}%", searchCriteria.desc));
     }
 
-    if !searchCriteria.fineness.is_empty() {
-        pre_query.push_str(" AND fineness = ?");
-        args.push(searchCriteria.fineness.get(0).unwrap().to_string());
+    let total_count: i64 = conn.exec_first(pre_query.as_str(), args.clone()).await.unwrap_or(Some(0)).unwrap();
+    total_count
+}
 
-        for i in 1..searchCriteria.fineness.len(){
-            pre_query.push_str(" OR fineness = ?");
-            args.push(searchCriteria.fineness.get(i).unwrap().to_string());
-        }
+pub async fn search_goods(POOL: &Pool, searchCriteria: &good_handler::SearchCriteria) -> Vec<good_handler::SearchGood> {
+    let mut conn = POOL.get_conn().await.unwrap();
+    let open_id = jwt::get_openid_from_jwt(&searchCriteria.jwt);
+    let store_id = user::get_user_by_open_id(POOL, &open_id.unwrap()).await.unwrap().unwrap().stores_id;
+    let mut pre_query = "SELECT * FROM goods WHERE store_id = ?".to_string();
+    let mut args: Vec<String> = Vec::new();
+    args.push(store_id.to_string());
+
+    // 类型过滤
+    if !searchCriteria.type_.is_empty() {
+        pre_query.push_str(" AND type = ?");
+        args.push(searchCriteria.type_.clone());
     }
 
-    pre_query.push_str(" ORDER BY ? ASC");
-    args.push(searchCriteria.sort_by.to_string());
+    // 品牌过滤
+    if !searchCriteria.brand.is_empty() {
+        pre_query.push_str(" AND (");
+        for (i, brand) in searchCriteria.brand.iter().enumerate() {
+            if i > 0 {
+                pre_query.push_str(" OR ");
+            }
+            pre_query.push_str("brand = ?");
+            args.push(brand.clone());
+        }
+        pre_query.push_str(")");
+    }
 
-    pre_query.push("LIMIT ? OFFSET ?");
+    // 精度过滤
+    if !searchCriteria.fineness.is_empty() {
+        pre_query.push_str(" AND (");
+        for (i, fineness) in searchCriteria.fineness.iter().enumerate() {
+            if i > 0 {
+                pre_query.push_str(" OR ");
+            }
+            pre_query.push_str("fineness = ?");
+            args.push(fineness.clone());
+        }
+        pre_query.push_str(")");
+    }
+
+    // 价格过滤
+    if searchCriteria.max_price > 0.0 {
+        pre_query.push_str(" AND price_in <= ?");
+        args.push(searchCriteria.max_price.to_string());
+    }
+    if searchCriteria.min_price > 0.0 && searchCriteria.min_price < searchCriteria.max_price {
+        pre_query.push_str(" AND price_in >= ?");
+        args.push(searchCriteria.min_price.to_string());
+    }
+
+    // 描述过滤
+    if !searchCriteria.desc.is_empty() {
+        pre_query.push_str(" AND desc LIKE ?");
+        args.push(format!("%{}%", searchCriteria.desc));
+    }
+
+    // 排序字段
+    let sort_by = &searchCriteria.sort_by;
+    if !sort_by.is_empty() {
+        pre_query.push_str(" ORDER BY ");
+        pre_query.push_str(sort_by);
+        pre_query.push_str(" ASC");
+    }
+
+    // 分页
+    pre_query.push_str(" LIMIT ? OFFSET ?");
     args.push(searchCriteria.page_size.to_string());
     let num = (searchCriteria.page - 1) * searchCriteria.page_size;
     args.push(num.to_string());
 
-    let query = pre_query.to_string();
-    let mut result = Vec::new();
-
-    let mut stmt = conn.prepare(&query).unwrap();
-    let mut rows = stmt.query(args).unwrap();
-    while let Some(row) = rows.next().unwrap() {
+    // 执行查询并处理结果
+    let query = pre_query;
+    let result: Vec<good_handler::SearchGood> = conn.exec_map(
+        query.as_str(),
+        args,
+        |(id, type_, brand, fineness, price_in, description, addr, pic_urls)| {
+            good_handler::SearchGood {
+                id,
+                type_,
+                brand,
+                fineness,
+                price_in,
+                description,
+                addr,
+                pic_urls,
+            }
+        }
         
-        
+    ).await.unwrap();  // 这里你可以选择更精确的错误处理
 
-    return result;
+    result
 }
+
 
