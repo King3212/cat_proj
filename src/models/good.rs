@@ -232,3 +232,56 @@ pub async fn search_goods(POOL: &Pool, searchCriteria: &good_handler::SearchCrit
 }
 
 
+pub async fn update_goods(POOL:&Pool ,criteria: &good_handler::SearchGood)-> Result<(),Error> {
+    let mut conn = POOL.get_conn().await.unwrap();
+    let mut query = String::from("UPDATE goods SET ");
+    if criteria.addr != "" {
+        query.push_str("addr = ?");
+    }
+    if criteria.brand != "" {
+        query.push_str("brand = ?");
+    }
+    if criteria.fineness != "" {
+        query.push_str("fineness = ?");
+    }
+    if criteria.price_in != 0.0 {
+        query.push_str("price_in = ?");
+    }
+    if criteria.type_ != "" {
+        query.push_str("type = ?");
+    }
+    if criteria.description != "" {
+        query.push_str("description = ?");
+    }
+    if criteria.pic_urls != "" {
+        query.push_str("pic_urls = ?");
+    }
+    query.push_str(" WHERE id = ?");
+    let mut args = vec![];
+    if criteria.addr != "" {
+        args.push(criteria.addr.clone());
+    }
+    if criteria.brand != "" {
+        args.push(criteria.brand.clone());
+    }
+    if criteria.fineness != "" {
+        args.push(criteria.fineness.to_string());
+    }
+    if criteria.price_in != 0.0 {
+        args.push(criteria.price_in.to_string());
+    }
+    if criteria.type_ != "" {
+        args.push(criteria.type_.clone());
+    }
+    if criteria.description != "" {
+        args.push(criteria.description.clone());
+    }
+    if criteria.pic_urls != "" {
+        args.push(criteria.pic_urls.clone());
+    }
+    args.push(criteria.id.to_string());
+
+    conn.exec_drop(query.as_str(), args).await
+    
+
+}

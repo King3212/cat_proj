@@ -30,3 +30,8 @@ pub async fn get_goods_routes(info: web::Json<good_handler::SearchCriteria>) -> 
     return HttpResponse::Ok().json(res);
 }
 
+#[post("updateGoods")]
+pub async fn update_goods_routes(info: web::Json<good_handler::UpdateCriteria>) -> impl Responder {
+    let res = good_handler::update_goods(&info).await;
+    return HttpResponse::Ok().json(res);
+}

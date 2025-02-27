@@ -51,6 +51,12 @@ pub struct SearchResult {
 }
 
 
+#[derive(Serialize)]
+pub struct UpdateCriteria{
+    pub jwt: String,
+    pub good:SearchGood,
+}
+
 use crate::models::good;
 use crate::POOL;
 
@@ -86,3 +92,18 @@ pub async fn search_goods(criteria: &SearchCriteria)-> SearchResult {
     }
 }
 
+pub async fn update_goods(criteria: &UpdateCriteria)-> String {
+    let result = jwt::validate_jwt(&criteria.jwt);
+    if result.is_err() {
+        return "Unauthorized".to_string();
+    }
+
+    let res = good::update_goods(&POOL,&criteria.good).await;
+    if res.is_err() {
+        return "fail".to_string();
+    }else{
+        return "success".to_string();
+    }
+}
+
+pub async fn sell
